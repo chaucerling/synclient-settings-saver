@@ -9,8 +9,51 @@
 
 APPNAME="apply-synclient-settings"
 TMPFILE=".synclient.out"
-TMPFOLDER="/tmp"
+TMPFOLDER=$HOME"/tmp"
+USERFILE=$HOME"/.config/synclient_user_settings"
 SYNFILE=$HOME"/.config/"$APPNAME".sh"
+DPFILE=$HOME"/.config/autostart/"$APPNAME".desktop"
+
+read_synclient_settings(){
+  # Remove synclient updating file if it exists
+  if [ -e $SYNFILE ]; then
+    rm $SYNFILE
+  fi
+
+  # Add bash header to new file
+  echo "#!/bin/bash" >> $SYNFILE
+
+  # Grab output from synclient
+  echo "Grabbing current settings from synclient..."
+  synclient -l > $TMPFILE
+
+  # Parse synclient output
+  echo "Parsing synclient settings..."
+  while read line; do
+  if [[ $line =~ ([[:alpha:]]+[0-9]?)[[:space:]]*=[[:space:]]*(-?[0-9\.]+) ]]; then
+    echo "synclient "${BASH_REMATCH[1]}"="${BASH_REMATCH[2]} >> $SYNFILE
+  fi
+  done < $TMPFILE
+  rm $TMPFILE
+}
+
+read_user_file(){
+  if [ -e $SYNFILE ]; then
+    rm $SYNFILE
+  fi
+
+  echo "#!/bin/bash" >> $SYNFILE
+
+  # Parse user file
+  echo "Parsing user file..."
+  cat $USERFILE | sed '$s/$/\n/' | while read line; do
+  if [[ $line =~ ([[:alpha:]]+[0-9]?)[[:space:]]*=[[:space:]]*(-?[0-9\.]+) ]]; then
+    echo "synclient "${BASH_REMATCH[1]}"="${BASH_REMATCH[2]} >> $SYNFILE
+  fi
+  done
+  bash $SYNFILE
+}
+
 
 # Check if synclient is accessible
 if [[ `command -v synclient` == '' ]]; then
@@ -21,37 +64,25 @@ fi
 # Change directory to tmp
 cd $TMPFOLDER
 
-# Remove synclient updating file if it exists
-if [ -e $SYNFILE ]; then
-	rm $SYNFILE
-fi
+# Choose updating from current synclient setting or user file
+echo "Select read which settings to update:(1/2/3)"
+select var in "synclient" "user file" "quit"
+do
+  case $var in
+  "synclient") read_synclient_settings;;
+  "user file") read_user_file;;
+  "quit") exit 0;;
+  esac
+  break
+done
 
-# Add bash header to new file
-echo "#!/bin/bash" >> $SYNFILE
-
-# Grab output from synclient
-echo "Grabbing current settings from synclient..."
-synclient -l > $TMPFILE
-
-# Parse synclient output
-echo "Parsing settings..."
-while read line; do
-	if [[ $line =~ ([[:alpha:]]+)[[:space:]]*=[[:space:]]*([0-9\.]+) ]]; then
-		echo "synclient "${BASH_REMATCH[1]}"="${BASH_REMATCH[2]} >> $SYNFILE
-		echo "	"${BASH_REMATCH[1]}"="${BASH_REMATCH[2]}
-	fi
-done < $TMPFILE
-rm $TMPFILE
 
 # Make output file executable
 chmod +x $SYNFILE
 
 echo; echo "Settings script created in "$SYNFILE
 
-
 # Add .desktop for non-KDE DEs
-DPFILE=$HOME"/.config/autostart/"$APPNAME".desktop"
-
 if [ -e $DPFILE ]; then
 	rm $DPFILE
 fi
