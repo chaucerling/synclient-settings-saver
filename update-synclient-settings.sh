@@ -95,5 +95,7 @@ echo "NoDisplay=false" >> $DPFILE
 echo "Name=Apply Synclient Settings" >> $DPFILE
 echo "Comment=Apply your saved synclient settings" >> $DPFILE
 echo "X-GNOME-Autostart-enabled=true" >> $DPFILE
+echo "X-GNOME-Autostart-Delay=15" >> $DPFILE
+
 
 echo "Added script to startup"
